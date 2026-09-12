@@ -4,6 +4,7 @@ import com.acme.salary.enums.Currency;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.EnumMap;
 import java.util.Map;
@@ -32,6 +33,20 @@ public class CurrencyExchangeRates {
             return null;
         }
         return amount.multiply(getRate(currency));
+    }
+
+    public BigDecimal convert(Currency sourceCurrency, Currency targetCurrency, BigDecimal amount) {
+        if (amount == null) {
+            return null;
+        }
+        if (sourceCurrency == null || targetCurrency == null || sourceCurrency == targetCurrency) {
+            return amount;
+        }
+
+        BigDecimal sourceRate = getRate(sourceCurrency);
+        BigDecimal targetRate = getRate(targetCurrency);
+        return amount.multiply(sourceRate)
+                .divide(targetRate, 10, RoundingMode.HALF_UP);
     }
 
     public Map<Currency, BigDecimal> getUsdRates() {

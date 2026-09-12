@@ -30,14 +30,14 @@ public interface SalaryRepository extends JpaRepository<Salary, Long> {
                    CAST(MIN(converted_salary) AS DECIMAL(19,2)) AS lowestSalary
             FROM (
                 SELECT CASE s.currency
-                    WHEN 'USD' THEN s.amount
-                    WHEN 'EUR' THEN s.amount * :eurRate
-                    WHEN 'GBP' THEN s.amount * :gbpRate
-                    WHEN 'INR' THEN s.amount * :inrRate
-                    WHEN 'CAD' THEN s.amount * :cadRate
-                    WHEN 'AUD' THEN s.amount * :audRate
-                    WHEN 'SGD' THEN s.amount * :sgdRate
-                    WHEN 'JPY' THEN s.amount * :jpyRate
+                    WHEN 'USD' THEN s.amount * :usdRate / :targetRate
+                    WHEN 'EUR' THEN s.amount * :eurRate / :targetRate
+                    WHEN 'GBP' THEN s.amount * :gbpRate / :targetRate
+                    WHEN 'INR' THEN s.amount * :inrRate / :targetRate
+                    WHEN 'CAD' THEN s.amount * :cadRate / :targetRate
+                    WHEN 'AUD' THEN s.amount * :audRate / :targetRate
+                    WHEN 'SGD' THEN s.amount * :sgdRate / :targetRate
+                    WHEN 'JPY' THEN s.amount * :jpyRate / :targetRate
                     ELSE s.amount
                 END AS converted_salary
                 FROM salaries s
@@ -45,13 +45,16 @@ public interface SalaryRepository extends JpaRepository<Salary, Long> {
             ) current_salary_values
             """, nativeQuery = true)
     CompensationSummaryProjection findCurrentSalarySummary(
+            @Param("targetCurrency") String targetCurrency,
+            @Param("usdRate") BigDecimal usdRate,
             @Param("eurRate") BigDecimal eurRate,
             @Param("gbpRate") BigDecimal gbpRate,
             @Param("inrRate") BigDecimal inrRate,
             @Param("cadRate") BigDecimal cadRate,
             @Param("audRate") BigDecimal audRate,
             @Param("sgdRate") BigDecimal sgdRate,
-            @Param("jpyRate") BigDecimal jpyRate);
+            @Param("jpyRate") BigDecimal jpyRate,
+            @Param("targetRate") BigDecimal targetRate);
 
     @Query(value = """
             SELECT e.country AS groupName,
@@ -61,14 +64,14 @@ public interface SalaryRepository extends JpaRepository<Salary, Long> {
             FROM (
                 SELECT s.employee_id, s.currency, s.amount,
                        CASE s.currency
-                           WHEN 'USD' THEN s.amount
-                           WHEN 'EUR' THEN s.amount * :eurRate
-                           WHEN 'GBP' THEN s.amount * :gbpRate
-                           WHEN 'INR' THEN s.amount * :inrRate
-                           WHEN 'CAD' THEN s.amount * :cadRate
-                           WHEN 'AUD' THEN s.amount * :audRate
-                           WHEN 'SGD' THEN s.amount * :sgdRate
-                           WHEN 'JPY' THEN s.amount * :jpyRate
+                           WHEN 'USD' THEN s.amount * :usdRate / :targetRate
+                           WHEN 'EUR' THEN s.amount * :eurRate / :targetRate
+                           WHEN 'GBP' THEN s.amount * :gbpRate / :targetRate
+                           WHEN 'INR' THEN s.amount * :inrRate / :targetRate
+                           WHEN 'CAD' THEN s.amount * :cadRate / :targetRate
+                           WHEN 'AUD' THEN s.amount * :audRate / :targetRate
+                           WHEN 'SGD' THEN s.amount * :sgdRate / :targetRate
+                           WHEN 'JPY' THEN s.amount * :jpyRate / :targetRate
                            ELSE s.amount
                        END AS converted_salary
                 FROM salaries s
@@ -79,13 +82,16 @@ public interface SalaryRepository extends JpaRepository<Salary, Long> {
             ORDER BY AVG(salary_values.converted_salary) DESC, e.country ASC
             """, nativeQuery = true)
     List<CompensationBreakdownProjection> findCurrentSalaryBreakdownByCountry(
+            @Param("targetCurrency") String targetCurrency,
+            @Param("usdRate") BigDecimal usdRate,
             @Param("eurRate") BigDecimal eurRate,
             @Param("gbpRate") BigDecimal gbpRate,
             @Param("inrRate") BigDecimal inrRate,
             @Param("cadRate") BigDecimal cadRate,
             @Param("audRate") BigDecimal audRate,
             @Param("sgdRate") BigDecimal sgdRate,
-            @Param("jpyRate") BigDecimal jpyRate);
+            @Param("jpyRate") BigDecimal jpyRate,
+            @Param("targetRate") BigDecimal targetRate);
 
     @Query(value = """
             SELECT e.department AS groupName,
@@ -95,14 +101,14 @@ public interface SalaryRepository extends JpaRepository<Salary, Long> {
             FROM (
                 SELECT s.employee_id, s.currency, s.amount,
                        CASE s.currency
-                           WHEN 'USD' THEN s.amount
-                           WHEN 'EUR' THEN s.amount * :eurRate
-                           WHEN 'GBP' THEN s.amount * :gbpRate
-                           WHEN 'INR' THEN s.amount * :inrRate
-                           WHEN 'CAD' THEN s.amount * :cadRate
-                           WHEN 'AUD' THEN s.amount * :audRate
-                           WHEN 'SGD' THEN s.amount * :sgdRate
-                           WHEN 'JPY' THEN s.amount * :jpyRate
+                           WHEN 'USD' THEN s.amount * :usdRate / :targetRate
+                           WHEN 'EUR' THEN s.amount * :eurRate / :targetRate
+                           WHEN 'GBP' THEN s.amount * :gbpRate / :targetRate
+                           WHEN 'INR' THEN s.amount * :inrRate / :targetRate
+                           WHEN 'CAD' THEN s.amount * :cadRate / :targetRate
+                           WHEN 'AUD' THEN s.amount * :audRate / :targetRate
+                           WHEN 'SGD' THEN s.amount * :sgdRate / :targetRate
+                           WHEN 'JPY' THEN s.amount * :jpyRate / :targetRate
                            ELSE s.amount
                        END AS converted_salary
                 FROM salaries s
@@ -113,13 +119,16 @@ public interface SalaryRepository extends JpaRepository<Salary, Long> {
             ORDER BY AVG(salary_values.converted_salary) DESC, e.department ASC
             """, nativeQuery = true)
     List<CompensationBreakdownProjection> findCurrentSalaryBreakdownByDepartment(
+            @Param("targetCurrency") String targetCurrency,
+            @Param("usdRate") BigDecimal usdRate,
             @Param("eurRate") BigDecimal eurRate,
             @Param("gbpRate") BigDecimal gbpRate,
             @Param("inrRate") BigDecimal inrRate,
             @Param("cadRate") BigDecimal cadRate,
             @Param("audRate") BigDecimal audRate,
             @Param("sgdRate") BigDecimal sgdRate,
-            @Param("jpyRate") BigDecimal jpyRate);
+            @Param("jpyRate") BigDecimal jpyRate,
+            @Param("targetRate") BigDecimal targetRate);
 
     @Query(value = """
             SELECT e.job_title AS groupName,
@@ -129,14 +138,14 @@ public interface SalaryRepository extends JpaRepository<Salary, Long> {
             FROM (
                 SELECT s.employee_id, s.currency, s.amount,
                        CASE s.currency
-                           WHEN 'USD' THEN s.amount
-                           WHEN 'EUR' THEN s.amount * :eurRate
-                           WHEN 'GBP' THEN s.amount * :gbpRate
-                           WHEN 'INR' THEN s.amount * :inrRate
-                           WHEN 'CAD' THEN s.amount * :cadRate
-                           WHEN 'AUD' THEN s.amount * :audRate
-                           WHEN 'SGD' THEN s.amount * :sgdRate
-                           WHEN 'JPY' THEN s.amount * :jpyRate
+                           WHEN 'USD' THEN s.amount * :usdRate / :targetRate
+                           WHEN 'EUR' THEN s.amount * :eurRate / :targetRate
+                           WHEN 'GBP' THEN s.amount * :gbpRate / :targetRate
+                           WHEN 'INR' THEN s.amount * :inrRate / :targetRate
+                           WHEN 'CAD' THEN s.amount * :cadRate / :targetRate
+                           WHEN 'AUD' THEN s.amount * :audRate / :targetRate
+                           WHEN 'SGD' THEN s.amount * :sgdRate / :targetRate
+                           WHEN 'JPY' THEN s.amount * :jpyRate / :targetRate
                            ELSE s.amount
                        END AS converted_salary
                 FROM salaries s
@@ -147,13 +156,16 @@ public interface SalaryRepository extends JpaRepository<Salary, Long> {
             ORDER BY AVG(salary_values.converted_salary) DESC, e.job_title ASC
             """, nativeQuery = true)
     List<CompensationBreakdownProjection> findCurrentSalaryBreakdownByJobTitle(
+            @Param("targetCurrency") String targetCurrency,
+            @Param("usdRate") BigDecimal usdRate,
             @Param("eurRate") BigDecimal eurRate,
             @Param("gbpRate") BigDecimal gbpRate,
             @Param("inrRate") BigDecimal inrRate,
             @Param("cadRate") BigDecimal cadRate,
             @Param("audRate") BigDecimal audRate,
             @Param("sgdRate") BigDecimal sgdRate,
-            @Param("jpyRate") BigDecimal jpyRate);
+            @Param("jpyRate") BigDecimal jpyRate,
+            @Param("targetRate") BigDecimal targetRate);
 
     interface CompensationSummaryProjection {
         BigDecimal getAverageSalary();

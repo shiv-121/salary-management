@@ -31,19 +31,27 @@ public class CompensationAnalyticsService {
     }
 
     public CompensationSummaryResponse getSummary() {
+        return getSummary(Currency.USD);
+    }
+
+    public CompensationSummaryResponse getSummary(Currency reportingCurrency) {
+        Currency normalizedCurrency = normalizeCurrency(reportingCurrency);
         long totalEmployees = employeeRepository.count();
 
         SalaryRepository.CompensationSummaryProjection projection = salaryRepository.findCurrentSalarySummary(
+                normalizedCurrency.name(),
+                currencyExchangeRates.getRate(Currency.USD),
                 currencyExchangeRates.getRate(Currency.EUR),
                 currencyExchangeRates.getRate(Currency.GBP),
                 currencyExchangeRates.getRate(Currency.INR),
                 currencyExchangeRates.getRate(Currency.CAD),
                 currencyExchangeRates.getRate(Currency.AUD),
                 currencyExchangeRates.getRate(Currency.SGD),
-                currencyExchangeRates.getRate(Currency.JPY));
+                currencyExchangeRates.getRate(Currency.JPY),
+                currencyExchangeRates.getRate(normalizedCurrency));
 
         return new CompensationSummaryResponse(
-                currencyExchangeRates.getReportingCurrencyCode(),
+                normalizedCurrency.name(),
                 totalEmployees,
                 projection != null ? projection.getAverageSalary() : null,
                 projection != null ? projection.getMedianSalary() : null,
@@ -53,36 +61,60 @@ public class CompensationAnalyticsService {
     }
 
     public List<CompensationBreakdownResponse> getByCountry() {
+        return getByCountry(Currency.USD);
+    }
+
+    public List<CompensationBreakdownResponse> getByCountry(Currency reportingCurrency) {
+        Currency normalizedCurrency = normalizeCurrency(reportingCurrency);
         return mapBreakdown(salaryRepository.findCurrentSalaryBreakdownByCountry(
+                normalizedCurrency.name(),
+                currencyExchangeRates.getRate(Currency.USD),
                 currencyExchangeRates.getRate(Currency.EUR),
                 currencyExchangeRates.getRate(Currency.GBP),
                 currencyExchangeRates.getRate(Currency.INR),
                 currencyExchangeRates.getRate(Currency.CAD),
                 currencyExchangeRates.getRate(Currency.AUD),
                 currencyExchangeRates.getRate(Currency.SGD),
-                currencyExchangeRates.getRate(Currency.JPY)));
+                currencyExchangeRates.getRate(Currency.JPY),
+                currencyExchangeRates.getRate(normalizedCurrency)));
     }
 
     public List<CompensationBreakdownResponse> getByDepartment() {
+        return getByDepartment(Currency.USD);
+    }
+
+    public List<CompensationBreakdownResponse> getByDepartment(Currency reportingCurrency) {
+        Currency normalizedCurrency = normalizeCurrency(reportingCurrency);
         return mapBreakdown(salaryRepository.findCurrentSalaryBreakdownByDepartment(
+                normalizedCurrency.name(),
+                currencyExchangeRates.getRate(Currency.USD),
                 currencyExchangeRates.getRate(Currency.EUR),
                 currencyExchangeRates.getRate(Currency.GBP),
                 currencyExchangeRates.getRate(Currency.INR),
                 currencyExchangeRates.getRate(Currency.CAD),
                 currencyExchangeRates.getRate(Currency.AUD),
                 currencyExchangeRates.getRate(Currency.SGD),
-                currencyExchangeRates.getRate(Currency.JPY)));
+                currencyExchangeRates.getRate(Currency.JPY),
+                currencyExchangeRates.getRate(normalizedCurrency)));
     }
 
     public List<CompensationBreakdownResponse> getByJobTitle() {
+        return getByJobTitle(Currency.USD);
+    }
+
+    public List<CompensationBreakdownResponse> getByJobTitle(Currency reportingCurrency) {
+        Currency normalizedCurrency = normalizeCurrency(reportingCurrency);
         return mapBreakdown(salaryRepository.findCurrentSalaryBreakdownByJobTitle(
+                normalizedCurrency.name(),
+                currencyExchangeRates.getRate(Currency.USD),
                 currencyExchangeRates.getRate(Currency.EUR),
                 currencyExchangeRates.getRate(Currency.GBP),
                 currencyExchangeRates.getRate(Currency.INR),
                 currencyExchangeRates.getRate(Currency.CAD),
                 currencyExchangeRates.getRate(Currency.AUD),
                 currencyExchangeRates.getRate(Currency.SGD),
-                currencyExchangeRates.getRate(Currency.JPY)));
+                currencyExchangeRates.getRate(Currency.JPY),
+                currencyExchangeRates.getRate(normalizedCurrency)));
     }
 
     private List<CompensationBreakdownResponse> mapBreakdown(List<SalaryRepository.CompensationBreakdownProjection> projections) {
@@ -93,5 +125,9 @@ public class CompensationAnalyticsService {
                         projection.getAverageSalary(),
                         projection.getMedianSalary()))
                 .collect(Collectors.toList());
+    }
+
+    private Currency normalizeCurrency(Currency reportingCurrency) {
+        return reportingCurrency == null ? Currency.USD : reportingCurrency;
     }
 }

@@ -9,13 +9,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.web.server.LocalServerPort;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.math.BigDecimal;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class CompensationAnalyticsServiceTest {
 
     @Autowired
@@ -26,6 +32,9 @@ class CompensationAnalyticsServiceTest {
 
     @Autowired
     private CompensationAnalyticsService compensationAnalyticsService;
+
+    @LocalServerPort
+    private int port;
 
     @BeforeEach
     void setUp() {
@@ -59,6 +68,65 @@ class CompensationAnalyticsServiceTest {
         assertThat(summary.medianSalary()).isEqualByComparingTo("2160.00");
         assertThat(summary.highestSalary()).isEqualByComparingTo("5000.00");
         assertThat(summary.lowestSalary()).isEqualByComparingTo("1440.00");
+    }
+
+    @Test
+    void summary_shouldDefaultToUsdAndAllowExplicitCurrencyOverride() {
+        var usdSummary = compensationAnalyticsService.getSummary();
+        var inrSummary = compensationAnalyticsService.getSummary(Currency.INR);
+
+        assertThat(usdSummary.reportingCurrency()).isEqualTo("USD");
+        assertThat(inrSummary.reportingCurrency()).isEqualTo("INR");
+        assertThat(inrSummary.totalEmployees()).isEqualTo(usdSummary.totalEmployees());
+        assertThat(inrSummary.averageSalary()).isNotNull();
+        assertThat(inrSummary.averageSalary()).isNotEqualByComparingTo(usdSummary.averageSalary());
+        assertThat(inrSummary.averageSalary()).isGreaterThan(usdSummary.averageSalary());
+    }
+
+    @Test
+    void breakdowns_shouldAggregateCurrentSalaryValuesInRequestedCurrency() {
+        var usdByCountry = compensationAnalyticsService.getByCountry();
+        var inrByCountry = compensationAnalyticsService.getByCountry(Currency.INR);
+        var usdByDepartment = compensationAnalyticsService.getByDepartment();
+        var inrByDepartment = compensationAnalyticsService.getByDepartment(Currency.INR);
+        var usdByJobTitle = compensationAnalyticsService.getByJobTitle();
+        var inrByJobTitle = compensationAnalyticsService.getByJobTitle(Currency.INR);
+
+        assertThat(usdByCountry).extracting("group").containsExactly("United States", "France", "India");
+        assertThat(inrByCountry).extracting("group").containsExactly("United States", "France", "India");
+        assertThat(usdByDepartment).extracting("group").contains("Engineering", "Sales", "Finance");
+        assertThat(inrByDepartment).extracting("group").contains("Engineering", "Sales", "Finance");
+        assertThat(usdByJobTitle).extracting("group").contains("Senior Software Engineer", "Account Manager", "Financial Analyst");
+        assertThat(inrByJobTitle).extracting("group").contains("Senior Software Engineer", "Account Manager", "Financial Analyst");
+
+        assertThat(inrByCountry.get(0).averageSalary()).isNotEqualByComparingTo(usdByCountry.get(0).averageSalary());
+        assertThat(inrByDepartment.get(0).averageSalary()).isNotEqualByComparingTo(usdByDepartment.get(0).averageSalary());
+        assertThat(inrByJobTitle.get(0).averageSalary()).isNotEqualByComparingTo(usdByJobTitle.get(0).averageSalary());
+    }
+
+    @Test
+    void invalidCurrency_shouldReturnBadRequest() throws IOException {
+        HttpURLConnection connection = (HttpURLConnection) new URL(
+                "http://localhost:" + port + "/api/analytics/summary?currency=INVALID").openConnection();
+        connection.setRequestMethod("GET");
+
+        int statusCode = connection.getResponseCode();
+        String response = readResponseBody(connection);
+
+        assertThat(statusCode).isEqualTo(400);
+        assertThat(response).contains("INVALID_CURRENCY");
+    }
+
+    private String readResponseBody(HttpURLConnection connection) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                connection.getErrorStream() != null ? connection.getErrorStream() : connection.getInputStream()))) {
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+            return builder.toString();
+        }
     }
 
     @Test
