@@ -14,7 +14,7 @@ import java.util.Optional;
 @Repository
 public interface SalaryRepository extends JpaRepository<Salary, Long> {
 
-    @Query("SELECT s FROM Salary s WHERE s.employee.id = :employeeId ORDER BY s.effectiveFrom ASC")
+    @Query("SELECT s FROM Salary s WHERE s.employee.id = :employeeId ORDER BY s.effectiveFrom DESC")
     List<Salary> findSalaryHistoryByEmployeeId(@Param("employeeId") Long employeeId);
 
     @Query("SELECT s FROM Salary s WHERE s.employee.id = :employeeId AND s.effectiveTo IS NULL")
