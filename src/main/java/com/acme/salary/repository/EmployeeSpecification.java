@@ -23,11 +23,12 @@ public class EmployeeSpecification {
      */
     public static Specification<Employee> searchByKeyword(String keyword) {
         return (root, query, criteriaBuilder) -> {
-            if (keyword == null || keyword.isBlank()) {
+            String normalized = normalizeSearchKeyword(keyword);
+            if (normalized == null) {
                 return criteriaBuilder.conjunction();
             }
 
-            String searchPattern = "%" + keyword.trim().toLowerCase(Locale.ROOT) + "%";
+            String searchPattern = "%" + normalized.toLowerCase(Locale.ROOT) + "%";
 
             Predicate codeMatch = criteriaBuilder.like(
                     criteriaBuilder.lower(root.get("employeeCode")), searchPattern);
@@ -37,8 +38,18 @@ public class EmployeeSpecification {
                     criteriaBuilder.lower(root.get("lastName")), searchPattern);
             Predicate emailMatch = criteriaBuilder.like(
                     criteriaBuilder.lower(root.get("email")), searchPattern);
+            Predicate fullNameMatch = criteriaBuilder.like(
+                    criteriaBuilder.lower(criteriaBuilder.concat(
+                            criteriaBuilder.concat(root.get("firstName"), " "),
+                            root.get("lastName"))),
+                    searchPattern);
+            Predicate reversedFullNameMatch = criteriaBuilder.like(
+                    criteriaBuilder.lower(criteriaBuilder.concat(
+                            criteriaBuilder.concat(root.get("lastName"), " "),
+                            root.get("firstName"))),
+                    searchPattern);
 
-            return criteriaBuilder.or(codeMatch, firstNameMatch, lastNameMatch, emailMatch);
+            return criteriaBuilder.or(codeMatch, firstNameMatch, lastNameMatch, emailMatch, fullNameMatch, reversedFullNameMatch);
         };
     }
 
@@ -99,6 +110,15 @@ public class EmployeeSpecification {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String normalizeSearchKeyword(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+
+        String normalized = keyword.trim().replaceAll("\\s+", " ");
+        return normalized.isEmpty() ? null : normalized;
     }
 
     /**

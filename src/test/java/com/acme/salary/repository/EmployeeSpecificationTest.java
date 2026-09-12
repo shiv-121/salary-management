@@ -27,7 +27,8 @@ class EmployeeSpecificationTest {
                 new Employee("EMP002", "Bob", "Green", "bob@usa.com", "United States", "Finance", "Financial Analyst"),
                 new Employee("EMP003", "Charlie", "Black", "charlie@india.com", "India", "Sales", "Account Manager"),
                 new Employee("EMP004", "Dana", "White", "dana@canada.com", "Canada", "Engineering", "Data Scientist"),
-                new Employee("EMP005", "John", "Smith", "john@france.com", "France", "Finance", "Senior Software Engineer")
+                new Employee("EMP005", "John", "Smith", "john@france.com", "France", "Finance", "Senior Software Engineer"),
+                new Employee("EMP006", "Shivam", "Sharma", "shivam.sharma@acme.example", "India", "Engineering", "Senior Software Engineer")
         ));
     }
 
@@ -40,7 +41,7 @@ class EmployeeSpecificationTest {
 
         assertThat(results.getContent())
                 .extracting(Employee::getEmployeeCode)
-                .containsExactlyInAnyOrder("EMP001", "EMP003");
+                .containsExactlyInAnyOrder("EMP001", "EMP003", "EMP006");
 
         Page<Employee> upperCaseResults = employeeRepository.findAll(
                 EmployeeSpecification.filterByCountry("IND"),
@@ -49,7 +50,7 @@ class EmployeeSpecificationTest {
 
         assertThat(upperCaseResults.getContent())
                 .extracting(Employee::getEmployeeCode)
-                .containsExactlyInAnyOrder("EMP001", "EMP003");
+                .containsExactlyInAnyOrder("EMP001", "EMP003", "EMP006");
     }
 
     @Test
@@ -61,7 +62,7 @@ class EmployeeSpecificationTest {
 
         assertThat(results.getContent())
                 .extracting(Employee::getEmployeeCode)
-                .containsExactlyInAnyOrder("EMP001", "EMP004");
+                .containsExactlyInAnyOrder("EMP001", "EMP004", "EMP006");
 
         Page<Employee> lowerCaseResults = employeeRepository.findAll(
                 EmployeeSpecification.filterByDepartment("fin"),
@@ -82,7 +83,7 @@ class EmployeeSpecificationTest {
 
         assertThat(results.getContent())
                 .extracting(Employee::getEmployeeCode)
-                .containsExactlyInAnyOrder("EMP001", "EMP005");
+                .containsExactlyInAnyOrder("EMP001", "EMP005", "EMP006");
 
         Page<Employee> analystResults = employeeRepository.findAll(
                 EmployeeSpecification.filterByJobTitle("Analyst"),
@@ -103,20 +104,65 @@ class EmployeeSpecificationTest {
 
         assertThat(results.getContent())
                 .extracting(Employee::getEmployeeCode)
-                .containsExactly("EMP001");
-        assertThat(results.getTotalElements()).isEqualTo(1);
+                .containsExactly("EMP001", "EMP006");
+        assertThat(results.getTotalElements()).isEqualTo(2);
     }
 
     @Test
     void globalSearch_shouldRemainCaseInsensitivePartialMatchAcrossNamesAndEmail() {
-        Page<Employee> results = employeeRepository.findAll(
+        Page<Employee> firstNameResults = employeeRepository.findAll(
                 EmployeeSpecification.searchByKeyword("ali"),
                 PageRequest.of(0, 10)
         );
 
-        assertThat(results.getContent())
+        assertThat(firstNameResults.getContent())
                 .extracting(Employee::getEmployeeCode)
                 .containsExactly("EMP001");
+
+        Page<Employee> lastNameResults = employeeRepository.findAll(
+                EmployeeSpecification.searchByKeyword("Sharma"),
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(lastNameResults.getContent())
+                .extracting(Employee::getEmployeeCode)
+                .containsExactly("EMP006");
+
+        Page<Employee> fullNameResults = employeeRepository.findAll(
+                EmployeeSpecification.searchByKeyword("Shivam Sharma"),
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(fullNameResults.getContent())
+                .extracting(Employee::getEmployeeCode)
+                .containsExactly("EMP006");
+
+        Page<Employee> caseInsensitiveFullNameResults = employeeRepository.findAll(
+                EmployeeSpecification.searchByKeyword("shivam sharma"),
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(caseInsensitiveFullNameResults.getContent())
+                .extracting(Employee::getEmployeeCode)
+                .containsExactly("EMP006");
+
+        Page<Employee> partialFullNameResults = employeeRepository.findAll(
+                EmployeeSpecification.searchByKeyword("Shivam Shar"),
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(partialFullNameResults.getContent())
+                .extracting(Employee::getEmployeeCode)
+                .containsExactly("EMP006");
+
+        Page<Employee> whitespaceResults = employeeRepository.findAll(
+                EmployeeSpecification.searchByKeyword("  Shivam   Sharma  "),
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(whitespaceResults.getContent())
+                .extracting(Employee::getEmployeeCode)
+                .containsExactly("EMP006");
 
         Page<Employee> emailResults = employeeRepository.findAll(
                 EmployeeSpecification.searchByKeyword("@USA.COM"),
@@ -126,6 +172,15 @@ class EmployeeSpecificationTest {
         assertThat(emailResults.getContent())
                 .extracting(Employee::getEmployeeCode)
                 .containsExactly("EMP002");
+
+        Page<Employee> employeeCodeResults = employeeRepository.findAll(
+                EmployeeSpecification.searchByKeyword("EMP006"),
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(employeeCodeResults.getContent())
+                .extracting(Employee::getEmployeeCode)
+                .containsExactly("EMP006");
     }
 
     @Test
@@ -135,8 +190,20 @@ class EmployeeSpecificationTest {
                 PageRequest.of(0, 10)
         );
 
-        assertThat(results.getContent()).hasSize(5);
-        assertThat(results.getTotalElements()).isEqualTo(5);
+        assertThat(results.getContent()).hasSize(6);
+        assertThat(results.getTotalElements()).isEqualTo(6);
+    }
+
+    @Test
+    void combinedSearchAndFilters_shouldUseAndSemantics() {
+        Page<Employee> results = employeeRepository.findAll(
+                EmployeeSpecification.combineFilters("shivam sharma", "india", "engineering", null),
+                PageRequest.of(0, 10)
+        );
+
+        assertThat(results.getContent())
+                .extracting(Employee::getEmployeeCode)
+                .containsExactly("EMP006");
     }
 
     @Test
@@ -147,8 +214,8 @@ class EmployeeSpecificationTest {
         );
 
         assertThat(results.getContent()).hasSize(2);
-        assertThat(results.getTotalElements()).isEqualTo(2);
-        assertThat(results.getTotalPages()).isEqualTo(1);
+        assertThat(results.getTotalElements()).isEqualTo(3);
+        assertThat(results.getTotalPages()).isEqualTo(2);
         assertThat(results.getContent())
                 .extracting(Employee::getLastName)
                 .containsExactly("Black", "Brown");
