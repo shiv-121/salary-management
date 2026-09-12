@@ -1,5 +1,7 @@
 package com.acme.salary.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -13,6 +15,8 @@ import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(EmployeeNotFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleEmployeeNotFoundException(
@@ -121,11 +125,13 @@ public class GlobalExceptionHandler {
             Exception ex,
             WebRequest request) {
 
+        logger.error("An unexpected exception occurred", ex);
+
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "INTERNAL_SERVER_ERROR",
-                "An unexpected error occurred. Please try again later.",
+                ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred. Please try again later.",
                 request.getDescription(false).replace("uri=", "")
         );
 

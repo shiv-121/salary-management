@@ -5,6 +5,14 @@ import com.acme.salary.dto.employee.CreateEmployeeRequest;
 import com.acme.salary.dto.employee.EmployeeResponse;
 import com.acme.salary.dto.employee.UpdateEmployeeRequest;
 import com.acme.salary.service.EmployeeService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/employees")
+@Tag(name = "Employees", description = "Employee management endpoints")
 public class EmployeeController {
 
     private final EmployeeService employeeService;
@@ -47,6 +56,25 @@ public class EmployeeController {
      * @return PageResponse with employees and pagination metadata with HTTP 200
      */
     @GetMapping
+    @Operation(
+            summary = "List employees",
+            description = "Retrieve employees with optional pagination, sorting, searching, and filtering. " +
+                    "Database-level operations support efficiently querying millions of records."
+    )
+    @Parameters({
+            @Parameter(name = "page", description = "Page number (0-indexed)", example = "0"),
+            @Parameter(name = "size", description = "Page size (max 100)", example = "20"),
+            @Parameter(name = "sort", description = "Sort field and direction (e.g., 'lastName,asc')", example = "lastName,asc"),
+            @Parameter(name = "search", description = "Search keyword (matches employeeCode, firstName, lastName, email)", example = "john"),
+            @Parameter(name = "country", description = "Filter by country (exact match)", example = "India"),
+            @Parameter(name = "department", description = "Filter by department (exact match)", example = "Engineering"),
+            @Parameter(name = "jobTitle", description = "Filter by job title (exact match)", example = "Software Engineer")
+    })
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Employees retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = PageResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid query parameters (e.g., page size exceeds 100, invalid sort field)")
+    })
     public ResponseEntity<PageResponse<EmployeeResponse>> getEmployees(
             @RequestParam(value = "page", required = false) Integer page,
             @RequestParam(value = "size", required = false) Integer size,
@@ -69,7 +97,15 @@ public class EmployeeController {
      * @return EmployeeResponse with HTTP 200, or 404 if not found
      */
     @GetMapping("/{id}")
-    public ResponseEntity<EmployeeResponse> getEmployeeById(@PathVariable Long id) {
+    @Operation(summary = "Get employee by ID", description = "Retrieve a specific employee by their unique ID")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Employee found",
+                    content = @Content(schema = @Schema(implementation = EmployeeResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Employee not found")
+    })
+    public ResponseEntity<EmployeeResponse> getEmployeeById(
+            @Parameter(description = "Employee ID", example = "1")
+            @PathVariable Long id) {
         EmployeeResponse employee = employeeService.getEmployeeById(id);
         return ResponseEntity.ok(employee);
     }
@@ -82,7 +118,15 @@ public class EmployeeController {
      * @return EmployeeResponse with HTTP 201 Created
      */
     @PostMapping
-    public ResponseEntity<EmployeeResponse> createEmployee(@Valid @RequestBody CreateEmployeeRequest request) {
+    @Operation(summary = "Create employee", description = "Create a new employee record. " +
+            "employeeCode and email must be unique across the system.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Employee created successfully",
+                    content = @Content(schema = @Schema(implementation = EmployeeResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request body or duplicate employeeCode/email")
+    })
+    public ResponseEntity<EmployeeResponse> createEmployee(
+            @Valid @RequestBody CreateEmployeeRequest request) {
         EmployeeResponse createdEmployee = employeeService.createEmployee(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdEmployee);
     }
@@ -96,7 +140,16 @@ public class EmployeeController {
      * @return EmployeeResponse with HTTP 200, or 404 if not found
      */
     @PutMapping("/{id}")
+    @Operation(summary = "Update employee", description = "Update an existing employee record. " +
+            "All fields are optional for partial updates.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Employee updated successfully",
+                    content = @Content(schema = @Schema(implementation = EmployeeResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request body or duplicate email"),
+            @ApiResponse(responseCode = "404", description = "Employee not found")
+    })
     public ResponseEntity<EmployeeResponse> updateEmployee(
+            @Parameter(description = "Employee ID", example = "1")
             @PathVariable Long id,
             @Valid @RequestBody UpdateEmployeeRequest request) {
         EmployeeResponse updatedEmployee = employeeService.updateEmployee(id, request);

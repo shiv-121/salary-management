@@ -3,6 +3,13 @@ package com.acme.salary.controller;
 import com.acme.salary.dto.salary.CreateSalaryRequest;
 import com.acme.salary.dto.salary.SalaryResponse;
 import com.acme.salary.service.SalaryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +23,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/employees/{employeeId}/salaries")
+@Tag(name = "Salaries", description = "Salary history and management endpoints")
 public class SalaryController {
 
     private final SalaryService salaryService;
@@ -33,7 +41,20 @@ public class SalaryController {
      * @return List of SalaryResponse objects with HTTP 200, or 404 if employee not found
      */
     @GetMapping
-    public ResponseEntity<List<SalaryResponse>> getSalaryHistory(@PathVariable Long employeeId) {
+    @Operation(
+            summary = "Get salary history",
+            description = "Retrieve the complete salary history for an employee, " +
+                    "sorted by effective date (most recent first). " +
+                    "Includes both active and historical salary records."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Salary history retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = SalaryResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Employee not found")
+    })
+    public ResponseEntity<List<SalaryResponse>> getSalaryHistory(
+            @Parameter(description = "Employee ID", example = "1")
+            @PathVariable Long employeeId) {
         List<SalaryResponse> salaryHistory = salaryService.getSalaryHistory(employeeId);
         return ResponseEntity.ok(salaryHistory);
     }
@@ -46,7 +67,19 @@ public class SalaryController {
      * @return SalaryResponse with HTTP 200, or 404 if employee not found or no active salary exists
      */
     @GetMapping("/current")
-    public ResponseEntity<SalaryResponse> getCurrentSalary(@PathVariable Long employeeId) {
+    @Operation(
+            summary = "Get current salary",
+            description = "Retrieve the currently active salary record for an employee. " +
+                    "The current salary is identified by a null effectiveTo date."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Current salary retrieved successfully",
+                    content = @Content(schema = @Schema(implementation = SalaryResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Employee not found or employee has no active salary")
+    })
+    public ResponseEntity<SalaryResponse> getCurrentSalary(
+            @Parameter(description = "Employee ID", example = "1")
+            @PathVariable Long employeeId) {
         SalaryResponse currentSalary = salaryService.getCurrentSalary(employeeId);
         return ResponseEntity.ok(currentSalary);
     }
@@ -63,7 +96,22 @@ public class SalaryController {
      * @return SalaryResponse with HTTP 201 Created
      */
     @PostMapping
+    @Operation(
+            summary = "Create salary record",
+            description = "Create a new salary record for an employee. " +
+                    "If an active salary exists and the new salary starts after it, " +
+                    "the previous salary period is automatically closed. " +
+                    "Salary records are immutable and preserve complete history."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Salary record created successfully",
+                    content = @Content(schema = @Schema(implementation = SalaryResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request: negative amount, overlapping periods, " +
+                    "invalid currency, or invalid date range"),
+            @ApiResponse(responseCode = "404", description = "Employee not found")
+    })
     public ResponseEntity<SalaryResponse> createSalary(
+            @Parameter(description = "Employee ID", example = "1")
             @PathVariable Long employeeId,
             @Valid @RequestBody CreateSalaryRequest request) {
         SalaryResponse createdSalary = salaryService.createSalary(employeeId, request);
