@@ -5,6 +5,8 @@ import com.acme.salary.entity.Salary;
 import com.acme.salary.enums.Currency;
 import com.acme.salary.repository.EmployeeRepository;
 import com.acme.salary.repository.SalaryRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -68,11 +70,15 @@ public class DataSeeder implements ApplicationRunner {
 
     private static final int DEFAULT_EMPLOYEE_COUNT = 10000;
     private static final int BATCH_SIZE = 500;
+    private static final int SALARIES_PER_EMPLOYEE = 3;
 
     private final EmployeeRepository employeeRepository;
     private final SalaryRepository salaryRepository;
     private final SeedProperties seedProperties;
     private final Random deterministicRandom;
+
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public DataSeeder(EmployeeRepository employeeRepository,
                       SalaryRepository salaryRepository,
@@ -92,6 +98,11 @@ public class DataSeeder implements ApplicationRunner {
         }
 
         int employeeCount = seedProperties.getEmployeeCount();
+        if (employeeCount <= 0) {
+            log.info("Seed skipped because app.seed.employee-count is {}. It must be greater than zero.", employeeCount);
+            return;
+        }
+
         long existingEmployees = employeeRepository.count();
         if (existingEmployees > 0) {
             log.info("Seed skipped because employee data already exists ({} employees present).", existingEmployees);
@@ -100,37 +111,46 @@ public class DataSeeder implements ApplicationRunner {
 
         log.info("Starting deterministic seed for {} employees.", employeeCount);
 
-        List<Employee> seededEmployees = generateEmployees(employeeCount);
-        List<Employee> savedEmployees = new ArrayList<>(seededEmployees.size());
+        try {
+            int seededEmployeeCount = 0;
+            int seededSalaryCount = 0;
 
-        for (int i = 0; i < seededEmployees.size(); i += BATCH_SIZE) {
-            List<Employee> batch = seededEmployees.subList(i, Math.min(i + BATCH_SIZE, seededEmployees.size()));
-            savedEmployees.addAll(employeeRepository.saveAll(batch));
-        }
+            for (int batchStart = 0; batchStart < employeeCount; batchStart += BATCH_SIZE) {
+                int batchEnd = Math.min(batchStart + BATCH_SIZE, employeeCount);
+                List<Employee> employeeBatch = new ArrayList<>(batchEnd - batchStart);
 
-        List<Salary> salarySeedRecords = new ArrayList<>(savedEmployees.size() * 3);
-        for (int i = 0; i < savedEmployees.size(); i++) {
-            salarySeedRecords.addAll(generateSalaryHistory(savedEmployees.get(i), i));
-            if (salarySeedRecords.size() >= BATCH_SIZE) {
-                salaryRepository.saveAll(salarySeedRecords);
-                salarySeedRecords.clear();
+                for (int index = batchStart; index < batchEnd; index++) {
+                    employeeBatch.add(buildEmployee(index));
+                }
+
+                List<Employee> savedEmployees = employeeRepository.saveAll(employeeBatch);
+                employeeRepository.flush();
+                entityManager.clear();
+
+                seededEmployeeCount += savedEmployees.size();
+                log.info("Seeded employees: {}/{}", seededEmployeeCount, employeeCount);
+
+                List<Salary> salaryBatch = new ArrayList<>(savedEmployees.size() * SALARIES_PER_EMPLOYEE);
+                for (int offset = 0; offset < savedEmployees.size(); offset++) {
+                    Employee employee = savedEmployees.get(offset);
+                    int employeeIndex = batchStart + offset;
+                    salaryBatch.addAll(generateSalaryHistory(employee, employeeIndex));
+                }
+
+                salaryRepository.saveAll(salaryBatch);
+                salaryRepository.flush();
+                entityManager.clear();
+
+                seededSalaryCount += salaryBatch.size();
+                log.info("Seeded salaries: {}/{}", seededSalaryCount, employeeCount * SALARIES_PER_EMPLOYEE);
             }
-        }
 
-        if (!salarySeedRecords.isEmpty()) {
-            salaryRepository.saveAll(salarySeedRecords);
+            log.info("Seed completed: {} employees and {} salary records created.",
+                    employeeCount, employeeCount * SALARIES_PER_EMPLOYEE);
+        } catch (Exception ex) {
+            log.error("Seed failed while generating deterministic employee and salary data.", ex);
+            throw ex;
         }
-
-        log.info("Seed completed: {} employees and {} salary records created.",
-                savedEmployees.size(), savedEmployees.size() * 3);
-    }
-
-    private List<Employee> generateEmployees(int employeeCount) {
-        List<Employee> employees = new ArrayList<>(employeeCount);
-        for (int index = 0; index < employeeCount; index++) {
-            employees.add(buildEmployee(index));
-        }
-        return employees;
     }
 
     private Employee buildEmployee(int index) {
