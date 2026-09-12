@@ -1,6 +1,7 @@
 package com.acme.salary.repository;
 
 import com.acme.salary.entity.Employee;
+import com.acme.salary.service.EmployeeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,9 @@ class EmployeeSpecificationTest {
 
     @Autowired
     private EmployeeRepository employeeRepository;
+
+    @Autowired
+    private EmployeeService employeeService;
 
     @BeforeEach
     void setUp() {
@@ -219,5 +223,26 @@ class EmployeeSpecificationTest {
         assertThat(results.getContent())
                 .extracting(Employee::getLastName)
                 .containsExactly("Black", "Brown");
+    }
+
+    @Test
+    void nameSort_shouldSortByFirstNameThenLastNameServerSide() {
+        employeeRepository.deleteAll();
+        employeeRepository.saveAll(List.of(
+                new Employee("EMP101", "Alex", "Smith", "alex.smith@demo.com", "India", "Engineering", "Lead Engineer"),
+                new Employee("EMP102", "Alex", "Brown", "alex.brown@demo.com", "India", "Engineering", "Senior Engineer"),
+                new Employee("EMP103", "Dana", "White", "dana.white@demo.com", "Canada", "Finance", "Analyst"),
+                new Employee("EMP104", "Charlie", "Black", "charlie.black@demo.com", "United States", "Sales", "Manager")
+        ));
+
+        var asc = employeeService.getEmployees(0, 10, "name,asc", null, null, null, null);
+        assertThat(asc.content())
+                .extracting(employee -> employee.firstName() + " " + employee.lastName())
+                .containsExactly("Alex Brown", "Alex Smith", "Charlie Black", "Dana White");
+
+        var desc = employeeService.getEmployees(0, 10, "name,desc", null, null, null, null);
+        assertThat(desc.content())
+                .extracting(employee -> employee.firstName() + " " + employee.lastName())
+                .containsExactly("Dana White", "Charlie Black", "Alex Smith", "Alex Brown");
     }
 }

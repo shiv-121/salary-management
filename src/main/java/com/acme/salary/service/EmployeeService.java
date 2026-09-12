@@ -42,6 +42,7 @@ public class EmployeeService {
             "employeeCode",
             "firstName",
             "lastName",
+            "name",
             "email",
             "country",
             "department",
@@ -271,6 +272,11 @@ public class EmployeeService {
         }
 
         Sort.Direction sortDirection = direction.equals("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        if ("name".equals(fieldName)) {
+            return Sort.by(sortDirection, "firstName")
+                    .and(Sort.by(sortDirection, "lastName"));
+        }
+
         return Sort.by(sortDirection, fieldName);
     }
 
