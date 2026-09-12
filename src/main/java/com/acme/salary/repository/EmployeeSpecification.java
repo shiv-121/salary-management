@@ -6,8 +6,7 @@ import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Locale;
 
 /**
  * JPA Specifications for dynamic filtering and searching of employees.
@@ -24,11 +23,12 @@ public class EmployeeSpecification {
      */
     public static Specification<Employee> searchByKeyword(String keyword) {
         return (root, query, criteriaBuilder) -> {
-            if (keyword == null || keyword.isBlank()) {
+            String normalized = normalizeSearchKeyword(keyword);
+            if (normalized == null) {
                 return criteriaBuilder.conjunction();
             }
 
-            String searchPattern = "%" + keyword.toLowerCase() + "%";
+            String searchPattern = "%" + normalized.toLowerCase(Locale.ROOT) + "%";
 
             Predicate codeMatch = criteriaBuilder.like(
                     criteriaBuilder.lower(root.get("employeeCode")), searchPattern);
@@ -38,54 +38,87 @@ public class EmployeeSpecification {
                     criteriaBuilder.lower(root.get("lastName")), searchPattern);
             Predicate emailMatch = criteriaBuilder.like(
                     criteriaBuilder.lower(root.get("email")), searchPattern);
+            Predicate fullNameMatch = criteriaBuilder.like(
+                    criteriaBuilder.lower(criteriaBuilder.concat(
+                            criteriaBuilder.concat(root.get("firstName"), " "),
+                            root.get("lastName"))),
+                    searchPattern);
+            Predicate reversedFullNameMatch = criteriaBuilder.like(
+                    criteriaBuilder.lower(criteriaBuilder.concat(
+                            criteriaBuilder.concat(root.get("lastName"), " "),
+                            root.get("firstName"))),
+                    searchPattern);
 
-            return criteriaBuilder.or(codeMatch, firstNameMatch, lastNameMatch, emailMatch);
+            return criteriaBuilder.or(codeMatch, firstNameMatch, lastNameMatch, emailMatch, fullNameMatch, reversedFullNameMatch);
         };
     }
 
     /**
-     * Filter employees by country (exact match).
+     * Filter employees by country using case-insensitive partial match.
      *
-     * @param country Country name
-     * @return Specification for exact country match
+     * @param country Country name fragment
+     * @return Specification for partial country match
      */
     public static Specification<Employee> filterByCountry(String country) {
         return (root, query, criteriaBuilder) -> {
-            if (country == null || country.isBlank()) {
+            String normalized = normalizeFilterValue(country);
+            if (normalized == null) {
                 return criteriaBuilder.conjunction();
             }
-            return criteriaBuilder.equal(root.get("country"), country);
+            String searchPattern = "%" + normalized.toLowerCase(Locale.ROOT) + "%";
+            return criteriaBuilder.like(criteriaBuilder.lower(root.get("country")), searchPattern);
         };
     }
 
     /**
-     * Filter employees by department (exact match).
+     * Filter employees by department using case-insensitive partial match.
      *
-     * @param department Department name
-     * @return Specification for exact department match
+     * @param department Department name fragment
+     * @return Specification for partial department match
      */
     public static Specification<Employee> filterByDepartment(String department) {
         return (root, query, criteriaBuilder) -> {
-            if (department == null || department.isBlank()) {
+            String normalized = normalizeFilterValue(department);
+            if (normalized == null) {
                 return criteriaBuilder.conjunction();
             }
-            return criteriaBuilder.equal(root.get("department"), department);
+            String searchPattern = "%" + normalized.toLowerCase(Locale.ROOT) + "%";
+            return criteriaBuilder.like(criteriaBuilder.lower(root.get("department")), searchPattern);
         };
     }
 
     /**
-     * Filter employees by job title (exact match).
+     * Filter employees by job title using case-insensitive partial match.
      *
-     * @param jobTitle Job title
-     * @return Specification for exact job title match
+     * @param jobTitle Job title fragment
+     * @return Specification for partial job title match
      */
     public static Specification<Employee> filterByJobTitle(String jobTitle) {
         return (root, query, criteriaBuilder) -> {
-            if (jobTitle == null || jobTitle.isBlank()) {
+            String normalized = normalizeFilterValue(jobTitle);
+            if (normalized == null) {
                 return criteriaBuilder.conjunction();
             }
-            return criteriaBuilder.equal(root.get("jobTitle"), jobTitle);
+            String searchPattern = "%" + normalized.toLowerCase(Locale.ROOT) + "%";
+            return criteriaBuilder.like(criteriaBuilder.lower(root.get("jobTitle")), searchPattern);
         };
+    }
+
+    private static String normalizeFilterValue(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String normalizeSearchKeyword(String keyword) {
+        if (keyword == null) {
+            return null;
+        }
+
+        String normalized = keyword.trim().replaceAll("\\s+", " ");
+        return normalized.isEmpty() ? null : normalized;
     }
 
     /**

@@ -40,11 +40,11 @@ public class EmployeeController {
      * Query parameters:
      * - page: Page number (0-indexed), default 0
      * - size: Page size, default 20, max 100
-     * - sort: Sort field and direction (e.g., "lastName,asc"), default "lastName,asc"
+     * - sort: Sort field and direction (e.g., "lastName,asc" or "name,asc"), default "lastName,asc"
      * - search: Keyword search across employeeCode, firstName, lastName, email
-     * - country: Filter by country (exact match)
-     * - department: Filter by department (exact match)
-     * - jobTitle: Filter by job title (exact match)
+     * - country: Filter by country using case-insensitive partial match
+     * - department: Filter by department using case-insensitive partial match
+     * - jobTitle: Filter by job title using case-insensitive partial match
      *
      * @param page Page number
      * @param size Page size
@@ -64,11 +64,11 @@ public class EmployeeController {
     @Parameters({
             @Parameter(name = "page", description = "Page number (0-indexed)", example = "0"),
             @Parameter(name = "size", description = "Page size (max 100)", example = "20"),
-            @Parameter(name = "sort", description = "Sort field and direction (e.g., 'lastName,asc')", example = "lastName,asc"),
+            @Parameter(name = "sort", description = "Sort field and direction (e.g., 'lastName,asc' or 'name,asc')", example = "lastName,asc"),
             @Parameter(name = "search", description = "Search keyword (matches employeeCode, firstName, lastName, email)", example = "john"),
-            @Parameter(name = "country", description = "Filter by country (exact match)", example = "India"),
-            @Parameter(name = "department", description = "Filter by department (exact match)", example = "Engineering"),
-            @Parameter(name = "jobTitle", description = "Filter by job title (exact match)", example = "Software Engineer")
+            @Parameter(name = "country", description = "Filter by country using case-insensitive partial match", example = "Ind"),
+            @Parameter(name = "department", description = "Filter by department using case-insensitive partial match", example = "Eng"),
+            @Parameter(name = "jobTitle", description = "Filter by job title using case-insensitive partial match", example = "Software")
     })
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Employees retrieved successfully",
