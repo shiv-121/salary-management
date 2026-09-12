@@ -78,6 +78,7 @@ public class SalaryService {
                 );
 
         validateSalaryAmount(request.amount());
+        validateEffectiveDates(request.effectiveFrom(), request.effectiveTo());
 
         Currency currency = validateAndParseCurrency(request.currency());
 
@@ -129,6 +130,18 @@ public class SalaryService {
         if (amount == null || amount.signum() <= 0) {
             throw new InvalidSalaryException(
                     "Salary amount must be positive"
+            );
+        }
+    }
+
+    private void validateEffectiveDates(LocalDate effectiveFrom, LocalDate effectiveTo) {
+        if (effectiveFrom == null) {
+            throw new InvalidSalaryException("effectiveFrom is required");
+        }
+
+        if (effectiveTo != null && effectiveTo.isBefore(effectiveFrom)) {
+            throw new InvalidSalaryException(
+                    "effectiveTo must be greater than or equal to effectiveFrom"
             );
         }
     }
