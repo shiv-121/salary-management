@@ -63,9 +63,9 @@ public class EmployeeService {
      * @param size Page size, default 20, max 100
      * @param sort Sort field and direction (e.g., "lastName,asc"), default "lastName,asc"
      * @param search Keyword search across employeeCode, firstName, lastName, email
-     * @param country Filter by country (exact match)
-     * @param department Filter by department (exact match)
-     * @param jobTitle Filter by job title (exact match)
+     * @param country Filter by country using case-insensitive partial match
+     * @param department Filter by department using case-insensitive partial match
+     * @param jobTitle Filter by job title using case-insensitive partial match
      * @return PageResponse containing employees and pagination metadata
      * @throws IllegalArgumentException if page size exceeds limit or invalid sort field
      */
