@@ -6,8 +6,7 @@ The application replaces spreadsheet-based salary tracking with a structured sys
 
 ## Live Application
 
-- Web UI: https://salary-ui.onrender.com/dashboard
-- REST API: https://salary-management-6wdd.onrender.com
+- Web UI: https://salary-ui.onrender.com
 - Swagger / OpenAPI: https://salary-management-6wdd.onrender.com/swagger-ui/index.html
 
 > The application is deployed for assessment/demo purposes.
