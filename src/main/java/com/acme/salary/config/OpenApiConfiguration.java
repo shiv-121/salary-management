@@ -26,7 +26,7 @@ public class OpenApiConfiguration {
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("ACME Engineering")
-                                .url("https://acme.com")
-                                .email("engineering@acme.com")));
+                                .url("https://salary-ui.onrender.com")
+                                .email("shivsharmaw121@gmail.com")));
     }
 }
